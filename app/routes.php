@@ -10,9 +10,9 @@ use Kreate\Routing\Routes;
  */
 
 Routes::get('/', function() {
-    return 'wohooo I\'m in the fucking closure';
+    return 'wohooo I\'m in the home route';
 });
 
-Routes::get('photos/:any/:char', 'PhotoController@test');
-//Routes::resource('/photos', 'PhotoController');
+//Routes::get('photos/:any/:num', 'PhotoController@test');
+Routes::resource('/photos', 'PhotoController');
 Routes::resource('/photos/albums', 'AlbumsController');

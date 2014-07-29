@@ -5,6 +5,11 @@ require_once kreate_vendor_dir . 'Kreate/Bootstrap/autoload.php';
 
 $app = require_once kreate_vendor_dir . 'Kreate/Bootstrap/run.php';
 
-$app->run();
+try {
+    $app->run();
+} catch (Exception $e) {
+    $app->handleException($e);
+}
+
 
 $app->shutdown();

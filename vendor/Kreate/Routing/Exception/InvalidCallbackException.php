@@ -2,5 +2,5 @@
 
 namespace Kreate\Routing\Exception;
 
-class InvalidCallbackException extends \Exception
+class InvalidCallbackException extends RoutingException
 {}

@@ -121,7 +121,7 @@ class Router
         } else if (contains($callback, '@')) {
             $type = self::CALLBACK_CONTROLLER;
         } else {
-            $message = "The route callback must be a Closure, Resource, or a Controller method: Controller@Method";
+            $message = "The route callback must be a Closure, Resource, or a Controller Method: Controller@Method";
             throw new Exception\InvalidCallbackException($message);
         }
         return $type;
