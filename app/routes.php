@@ -13,6 +13,6 @@ Routes::get('/', function() {
     return 'wohooo I\'m in the home route';
 });
 
-//Routes::get('photos/:any/:num', 'PhotoController@test');
+Routes::get('test/:id/:method', 'PhotoController@test');
 Routes::resource('/photos', 'PhotoController');
 Routes::resource('/photos/albums', 'AlbumsController');

@@ -84,6 +84,9 @@ class Routes
         if ($route[0] != '/') {
             $route = '/' . $route;
         }
+        if (strlen($route) > 1 && endsWith($route, '/')) {
+            $route = rtrim($route, '/');
+        }
         return $route;
     }
 

@@ -8,3 +8,4 @@ define('kreate_config_dir', kreate_app_dir . 'config/');
 
 define('KREATE_START', microtime(true));
 
+require_once kreate_vendor_dir . 'Kreate/Bootstrap/autoload.php';

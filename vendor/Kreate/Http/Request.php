@@ -23,7 +23,8 @@ class Request
     {
         $this->uri = $_SERVER['REQUEST_URI'];
 
-        $this->fullUrl = 'http' . (isset($_SERVER['HTTPS']) ? 's' : '') . '://' . "{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
+        $this->fullUrl = 'http' . (isset($_SERVER['HTTPS']) ? 's' : '') . '://' .
+                                                "{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
 
         $this->get = $_GET;
         $this->post = $_POST;
@@ -43,7 +44,7 @@ class Request
      *
      * @return Request
      */
-    public function getInstance()
+    public static function getInstance()
     {
         if (!isset(self::$instance)) {
             self::$instance = new self();

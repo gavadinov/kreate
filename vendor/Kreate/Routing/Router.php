@@ -3,6 +3,7 @@
 namespace Kreate\Routing;
 
 use Kreate\Http\Request;
+use Kreate\Routing\Exception\InvalidCallbackException;
 
 class Router
 {
@@ -39,7 +40,7 @@ class Router
         return $result;
     }
 
-    private function execClosure($closure, $params)
+    private function execClosure(\Closure $closure, $params)
     {
         return $closure->__invoke($params);
     }
@@ -57,13 +58,13 @@ class Router
         }
         if (! class_exists($controllerName)) {
             $message = "The controller class {$controllerName} does not exist.";
-            throw new Exception\InvalidCallbackException($message);
+            throw new InvalidCallbackException($message);
         }
         $controller = new $controllerName();
 
         if (! method_exists($controller, $method)) {
             $message = "The controller class {$controllerName} does not have a method {$method}.";
-            throw new Exception\InvalidCallbackException($message);
+            throw new InvalidCallbackException($message);
         }
 
         return $controller->$method($params);
@@ -75,10 +76,10 @@ class Router
         $currRoute = $this->request->uri;
         $routes = $this->routes[$type];
         foreach ($routes as $route => $callback) {
-            $route = $this->prepareRouteForRegExp($route);
+            $params = $this->prepareRouteForRegExp($route);
             list($match, $matches) = $this->match($currRoute, $route);
             if ($match) {
-                $params = $this->prepareParams($matches);
+                $params = $this->prepareParams($params, $matches);
                 return array($route, $callback, $params);
             }
         }
@@ -86,17 +87,19 @@ class Router
         throw new Exception\RouteNotFoundException($message);
     }
 
-    private function prepareParams(array $matches)
+    private function prepareParams(array $params, array $matches)
     {
-        if (count($matches) > 1) {
-            array_shift($matches);
-            if (count($matches) > 1) {
-                return $matches;
-            } else {
-                return $matches[0];
-            }
+        $result = array();
+        if (empty($params)) return;
+
+        if (count($params) == 1) return array_pop($matches);
+
+        foreach ($params as $key => $value) {
+            $k = ltrim($value, ':');
+            $result[$k] = $matches[$key];
         }
-        return;
+
+        return $result;
     }
 
     private function match($route, $pattern)
@@ -105,13 +108,17 @@ class Router
         return array($match, $matches);
     }
 
-    private function prepareRouteForRegExp($route)
+    private function prepareRouteForRegExp(&$route)
     {
+        $params = array();
+        $route = preg_replace_callback('/(:[a-zA-Z0-9\_\-]*)/', function($matches) use (&$params) {
+
+            $params[count($params)+1] = $matches[1];
+            return '([^/]*)';
+        }, $route);
         $route = '#' . $route . '$#';
-        $route = str_replace(':any', '([0-9a-zA-Z]+)', $route);
-        $route = str_replace(':num', '([0-9]+)', $route);
-        $route = str_replace(':char', '([a-zA-Z]+)', $route);
-        return $route;
+
+        return $params;
     }
 
     private function resolveCallbackType($callback)
@@ -122,7 +129,7 @@ class Router
             $type = self::CALLBACK_CONTROLLER;
         } else {
             $message = "The route callback must be a Closure, Resource, or a Controller Method: Controller@Method";
-            throw new Exception\InvalidCallbackException($message);
+            throw new InvalidCallbackException($message);
         }
         return $type;
     }

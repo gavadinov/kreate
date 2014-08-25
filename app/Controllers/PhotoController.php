@@ -21,4 +21,8 @@ class PhotoController
     {
         return 'create';
     }
+
+    public function test($params) {
+        var_dump($params);
+    }
 }

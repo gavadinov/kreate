@@ -8,6 +8,7 @@ use \Kreate\Http\Response;
 use \Kreate\Routing\Router;
 use \Kreate\Routing\Exception\RoutingException;
 use \Kreate\Routing\Exception\RouteNotFoundException;
+use Kreate\Routing\Exception\InvalidCallbackException;
 
 class Application
 {
@@ -33,7 +34,7 @@ class Application
      *
      * @return Application
      */
-    public function getInstance($config = null, $request = null)
+    public static function getInstance($config = null, $request = null)
     {
         if (! isset(self::$instance)) {
             self::$instance = new self($config, $request);
@@ -84,6 +85,8 @@ class Application
         $errorController = new \ErrorsController();
         if ($e instanceof RouteNotFoundException) {
             $this->content = $errorController->error404();
+        } else {
+            $this->content = $e->getMessage();
         }
     }
 
