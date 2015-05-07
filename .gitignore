@@ -1,4 +1,3 @@
-/nbproject/*
-/.settings/*
-/.buildpath
-/.project
+.settings
+.project
+.buildpath

@@ -1,0 +1,14 @@
+#!/usr/bin/php
+<?php
+
+use Framework\Http\Request;
+
+require_once __DIR__ . '/../app/globals.php';
+require_once framework_dir . 'Bootstrap/autoload.php';
+require_once framework_dir . 'Support/helpers.php';
+
+$req = Request::getInstance();
+$req->setParam('cliData.controller', 'CliKreate');
+$req->setParam('cliData.method', 'kreate');
+
+require_once framework_dir . 'Bootstrap/run.php';

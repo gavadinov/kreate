@@ -1,15 +1,6 @@
 <?php
-error_reporting(E_ALL);
 
-require_once '../vendor/Kreate/Bootstrap/_init.php';
-
-$app = require_once kreate_vendor_dir . 'Kreate/Bootstrap/run.php';
-
-try {
-    $app->run();
-} catch (Exception $e) {
-    $app->handleException($e);
-}
-
-
-$app->shutdown();
+require_once '../app/globals.php';
+require_once framework_dir . 'Bootstrap/autoload.php';
+require_once framework_dir . 'Support/helpers.php';
+require_once framework_dir . 'Bootstrap/run.php';

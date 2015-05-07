@@ -1,18 +1,11 @@
 <?php
 
-use Kreate\Routing\Routes;
+use Framework\Routing\Routes;
 
 /**
  * Application routes.
  *
- * Here you can register the routes for your application.
- * Simply register an URI you want Kreate to respond to.
+ * Here you can register the routes for the application.
  */
 
-Routes::get('/', function() {
-    return 'wohooo I\'m in the home route';
-});
-
-Routes::get('test/:id/:method', 'PhotoController@test');
-Routes::resource('/photos', 'PhotoController');
-Routes::resource('/photos/albums', 'AlbumsController');
+Routes::get('/', 'home', 'Home@index');

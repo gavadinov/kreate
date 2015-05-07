@@ -1,0 +1,21 @@
+<?php
+use Framework\Config\AppConfig;
+?>
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+
+		<link rel="shortcut icon" href="favicon.ico" type="image/ico" />
+
+		<!-- CSS -->
+
+		<title><?= (AppConfig::get('title', 'KREATE')) ?></title>
+	</head>
+	<body>
+		<div class="content">
+			<?php (isset($view) ? include $view : null); ?>
+		</div>
+	</body>
+</html>

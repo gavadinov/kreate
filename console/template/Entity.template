@@ -1,0 +1,33 @@
+<?php
+namespace Entity;
+
+use Framework\Persistence\AbstractEntity;
+
+class {{className}} extends AbstractEntity
+{
+	protected $propertyTypes = array(
+		'int' => array(
+{{integers}}
+		),
+		'float' => array(
+{{float}}
+		),
+		'double' => array(
+{{double}}
+		),
+	);
+
+	protected $defaults = array(
+{{defaults}}
+	);
+
+	protected
+{{properties}};
+
+		public function getPkName()
+		{
+			return '{{pkName}}';
+		}
+
+{{methods}}
+}

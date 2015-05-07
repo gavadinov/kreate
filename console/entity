@@ -1,0 +1,100 @@
+#!/usr/bin/php
+<?php
+
+use Framework\Factory\AdapterFactory;
+require_once 'BaseCommand.php';
+
+class EntityCommand extends BaseCommand
+{
+	public function create()
+	{
+		if ($this->helpMode) {
+			$str = $this->clr('Syntax: ', 'cyan');
+			$str .= $this->clr('php entity TABLE_NAME DATABASE_NAME ENTITY_NAME HOST', 'light_cyan');
+			$this->out($str);
+			return;
+		}
+
+		$table = $this->arg(1);
+		$database = $this->arg(2);
+		$className = $this->arg(3, false);
+		if (! $className) {
+			$str = $this->clr('No class name defined!!! Type php entity --help', 'red');
+			$this->out($str);
+			return;
+		}
+		$host = $this->arg(4, '192.168.0.144');
+
+		$cfg = array(
+			'dbHost' => $host,
+			'dbName' => $database
+		);
+		$adapter = AdapterFactory::create($cfg);
+
+		$sql = "SHOW COLUMNS FROM {$table}";
+		$fields = $adapter->exec($sql)->fetchAll(PDO::FETCH_ASSOC);
+
+		$properties = '';
+		$methods = '';
+		$int = '';
+		$float = '';
+		$double = '';
+		$defaults = '';
+		foreach ($fields as $row) {
+			$p = $row['Field'];
+			$l = underScoreToCamelCase($p);
+			$m = str_replace(' ', '', ucwords(str_replace('_', ' ', $l)));
+
+			if (! isset($row['Default'])) {
+				$null = ($row['Null'] == 'YES' ? true : false);
+				if ($null) {
+					$defaults .= "\t\t'{$p}' => null,\n";
+				} else {
+					$type = $row['Type'];
+					if (preg_match('/int/i', $type) || preg_match('/float/i', $type) || preg_match('/double/i', $type)) {
+						$defaults .= "\t\t'{$p}' => 0,\n";
+					} else {
+						$defaults .= "\t\t'{$p}' => '',\n";
+					}
+				}
+			}
+
+			$type = $row['Type'];
+			if (preg_match('/int/i', $type)) {
+				$int .= "\t\t\t'{$p}',\n";
+			}
+			if (preg_match('/float/i', $type)) {
+				$float .= "\t\t\t'{$p}',\n";
+			}
+			if (preg_match('/double/i', $type)) {
+				$double .= "\t\t\t'{$p}',\n";
+			}
+
+			$properties .= "\t\t\${$p},\n";
+			$methods .= "\t\tpublic function get{$m}()\n\t\t{\n\t\t\treturn \$this->{$p};\n\t\t}\n";
+			$methods .= "\t\tpublic function set{$m}(\${$l})\n\t\t{\n\t\t\t\$this->{$p} = \${$l};\n\t\t\treturn \$this;\n\t\t}\n\n";
+
+		}
+		$properties = substr($properties, 0, strlen($properties) - 2);
+		$pkname = $fields[0]['Field'];
+
+		$template = file_get_contents('template/Entity.template');
+		$template = str_replace('{{className}}', $className, $template);
+		$template = str_replace('{{properties}}', $properties, $template);
+		$template = str_replace('{{methods}}', $methods, $template);
+		$template = str_replace('{{pkName}}', $pkname, $template);
+		$template = str_replace('{{integers}}', $int, $template);
+		$template = str_replace('{{float}}', $float, $template);
+		$template = str_replace('{{double}}', $double, $template);
+		$template = str_replace('{{defaults}}', $defaults, $template);
+
+		$file = app_dir . 'Entity/' . ucfirst($className) . '.php';
+		file_put_contents($file, $template);
+
+		$this->out($this->clr('SUCCESS. Created: ' . $file, 'green'));
+	}
+}
+
+$helpMode = ($argv[1] == '--help');
+$command = new EntityCommand($argv, $helpMode);
+$command->create();
