@@ -3,13 +3,16 @@ namespace Framework\Routing;
 
 use Framework\Http\Request;
 use Framework\Routing\Exception\UrlGeneratorException;
+use Framework\Routing\Exception\RouteNotFoundException;
+use Framework\Support\Input;
 
 class Url
 {
 	/**
 	 * Generates URL based on a router rule
 	 *
-	* @param string $name
+	 *
+	 * @param string $name
 	 * @param array $params Parameters to be replaced in the URL
 	 * @throws UrlGeneratorException
 	 * @return string
@@ -38,9 +41,28 @@ class Url
 	}
 
 	/**
+	 * Generate GET string from the current GET params
+	 *
+	 *
+	 * @return string
+	 */
+	public static function generateGetString()
+	{
+		$get = '?';
+		foreach (Input::get() as $key => $value) {
+			$get .= "{$key}={$value}&";
+		}
+
+		$get = rtrim($get, '&');
+
+		return $get;
+	}
+
+	/**
 	 * Find the relative route by name
 	 *
-	* @param string $name
+	 *
+	 * @param string $name
 	 * @throws \InvalidArgumentException
 	 */
 	public static function find($name)
@@ -50,5 +72,17 @@ class Url
 			throw new \InvalidArgumentException('Unknown named route: ' . $name);
 		}
 		return ltrim($rule->route, '/');
+	}
+
+	public static function findRouteCallback($route, $type = 'post')
+	{
+		try {
+			$route = '/' . ltrim($route, '/');
+			list($controllerName, $method) = (new Router(Request::getInstance()))->resolve($route, $type);
+		} catch (RouteNotFoundException $e) {
+			return false;
+		}
+
+		return $controllerName . '@' . $method;
 	}
 }
