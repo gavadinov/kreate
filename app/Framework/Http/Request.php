@@ -15,6 +15,7 @@ class Request
 			$trimmedUri,
 			$fullUri,
 			$type,
+			$isSecure,
 			$getParamsString,
 			$params = array();
 
@@ -29,7 +30,9 @@ class Request
 			return;
 		}
 
-		$this->host = 'http' . (isset($_SERVER['HTTPS']) ? 's' : '') . '://' . $_SERVER['HTTP_HOST'];
+		$this->isSecure = isset($_SERVER['HTTPS']);
+
+		$this->host = 'http' . ($this->isSecure ? 's' : '') . '://' . $_SERVER['HTTP_HOST'];
 
 		$this->url = $this->host . $_SERVER['REQUEST_URI'];
 

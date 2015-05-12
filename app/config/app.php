@@ -69,6 +69,8 @@ return array(
 	 */
 	'sessionName' => 'KREATE',
 
+	'secureSession' => true,
+
 	/*
 	 * Name of the layout file
 	 */

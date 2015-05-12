@@ -34,6 +34,11 @@ class Session
 		if ($name = AppConfig::get('sessionName', false)) {
 			session_name($name);
 		}
+
+		if (Request::getInstance()->isSecure && AppConfig::get('secureSession', false)) {
+			ini_set('session.cookie_secure', 1);
+		}
+
 		session_start();
 	}
 
@@ -53,8 +58,6 @@ class Session
 		return $return;
 	}
 
-	/**
-	*/
 	private function setStorage()
 	{
 		$sessionLife = AppConfig::get('sessionLife', 84600);

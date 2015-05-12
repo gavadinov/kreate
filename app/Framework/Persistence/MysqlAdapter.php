@@ -126,7 +126,7 @@ class MysqlAdapter
 			$this->queryOk = true;
 		} catch (\PDOException $e) {
 			$this->queryOk = false;
-			throw new DatabaseException('Query failed: ' . $e->getMessage());
+			throw new DatabaseException('Query failed: ' . $sql . '  | MESSAGE: ' . $e->getMessage());
 		}
 
 		Profiler::stopMiniTimer(Profiler::TIMER_QUERY);
