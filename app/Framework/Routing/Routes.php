@@ -48,19 +48,19 @@ class Routes
 		),
 		'show' => array(
 			'method' => 'get',
-			'route' => '/:any'
+			'route' => '/:id'
 		),
 		'edit' => array(
 			'method' => 'get',
-			'route' => '/:any/edit'
+			'route' => '/:id/edit'
 		),
 		'update' => array(
 			'method' => 'put',
-			'route' => '/:any'
+			'route' => '/:id'
 		),
 		'destroy' => array(
 			'method' => 'delete',
-			'route' => '/:any'
+			'route' => '/:id'
 		));
 
 	protected static $registerMethods = array(
@@ -109,6 +109,8 @@ class Routes
 			if ($method == 'any') {
 				self::$routes['get'][$rule->route] = $rule;
 				self::$routes['post'][$rule->route] = $rule;
+				self::$routes['put'][$rule->route] = $rule;
+				self::$routes['delete'][$rule->route] = $rule;
 			} else {
 				self::$routes[$method][$rule->route] = $rule;
 			}
