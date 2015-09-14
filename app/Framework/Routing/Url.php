@@ -35,7 +35,7 @@ class Url
 		}
 
 		$request = Request::getInstance();
-		$url = $request->host . $request->trimmedUri . '/' . $uri;
+		$url = $request->baseUrl . $uri;
 
 		return $url;
 	}
@@ -46,14 +46,19 @@ class Url
 	 *
 	 * @return string
 	 */
-	public static function generateGetString()
+	public static function generateGetString(array $addParams = array())
 	{
 		$get = '?';
-		foreach (Input::get() as $key => $value) {
+		$params = array_merge(Input::get(), $addParams);
+		foreach ($params as $key => $value) {
 			$get .= "{$key}={$value}&";
 		}
 
 		$get = rtrim($get, '&');
+
+		if ($get == '?') {
+			return '';
+		}
 
 		return $get;
 	}
