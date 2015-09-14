@@ -10,16 +10,6 @@ return array(
 	'env' => '',
 
 	/*
-	 * Path from the root (/) to the index of our app
-	 * RegEx is also acceptable
-	 */
-	'devPath' => '\/.*\/public',
-
-	'testPath' => '/',
-
-	'livePath' => '/',
-
-	/*
 	 * Here we can set the DEVELOPMENT urls for our application
 	 * RegEx is also acceptable
 	 */
