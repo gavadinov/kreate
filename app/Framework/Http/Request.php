@@ -2,17 +2,15 @@
 
 namespace Framework\Http;
 
-use Framework\Config\AppConfig;
-
 class Request
 {
 
 	protected
 			$host,
+			$httpHost,
 			$uri,
 			$url,
 			$baseUrl,
-			$trimmedUri,
 			$fullUri,
 			$type,
 			$isSecure,
@@ -32,60 +30,48 @@ class Request
 
 		$this->isSecure = isset($_SERVER['HTTPS']);
 
+		$this->httpHost = $_SERVER['HTTP_HOST'];
+
 		$this->host = 'http' . ($this->isSecure ? 's' : '') . '://' . $_SERVER['HTTP_HOST'];
 
-		$this->url = $this->host . $_SERVER['REQUEST_URI'];
-
-		$env = AppConfig::resolveEnv();
-		$path = AppConfig::get($env . 'Path');
-		if ($path == '/' || $path == '\/') {
-			$this->baseUrl = $this->host . '/';
-		} else {
-			$this->baseUrl = preg_replace_callback('/(?:.*' . $path . '\/)(.*)/', function ($matches)
-			{
-				$replace = preg_quote($matches[1]);
-				return preg_replace('#' . $replace . '\b#', '', $matches[0]);
-			}, $_SERVER['REQUEST_URI']);
-
-			$this->baseUrl = $this->host . $this->baseUrl;
-		}
+		$this->setUrl();
 
 		$this->setUri();
-
-		$this->getParamsString = substr($this->url, strpos($this->url, '?'));
 
 		$this->resolveType();
 	}
 
+	private function setUrl()
+	{
+		$this->url = $this->host . $_SERVER['REQUEST_URI'];
+
+		$script = $_SERVER['PHP_SELF'];
+		$index = strrpos($script, '/');
+		$baseUri = substr($script, 0, $index);
+		$this->baseUrl = $this->host . $baseUri . '/';
+	}
+
 	private function setUri()
 	{
-		$env = AppConfig::resolveEnv();
-		$remove = AppConfig::get($env . 'Path');
-		if ($remove == '/' || $remove == '\/') {
-			$remove = '//';
-		} else {
-			$remove = '/.*' . $remove . '/';
-		}
-
 		$serverUri = explode('?', $_SERVER['REQUEST_URI'])[0];
-		$uri = preg_replace($remove, '', $serverUri);
+		$urlWithoutGet = explode('?', $this->url)[0];
+		$uri = str_replace($this->baseUrl, '', $urlWithoutGet);
 		if ($uri !== '/') {
-			$uri = rtrim($uri, '/');
+			$uri = trim($uri, '/');
+			$uri = '/' . $uri;
 			$serverUri = rtrim($serverUri, '/');
 		}
 		$this->uri = $uri;
-		preg_match($remove, $serverUri, $matches);
-		$trimmedUri = '';
-		if (! empty($matches)) {
-			$trimmedUri = $matches[0];
-		}
-		$this->trimmedUri = $trimmedUri;
+
 		$this->fullUri = $serverUri;
+
+		$this->getParamsString = substr($this->url, strpos($this->url, '?'));
 	}
 
 	/**
 	 * Resolve request type - get, post, put, delete
-	*/
+	 *
+	 */
 	private function resolveType()
 	{
 		$type = (isset($_POST['_method']) ? $_POST['_method'] : $_SERVER['REQUEST_METHOD']);
@@ -102,7 +88,8 @@ class Request
 	 * Used for passing data between parts of the framwork
 	 * Can be set using DOT notation (->setParam('arr.anotherArr.key', 1))
 	 * If we need the value to be added to the deepest array the syntax is (->setParam('arr.anotherArr.key[]', 1))
-	* @param string $name
+	 *
+	 * @param string $name
 	 * @param string $value
 	 */
 	public function setParam($name, $value)
@@ -125,7 +112,8 @@ class Request
 	 * Sets a request system parameter
 	 * Used for passing data between parts of the framwork
 	 * Can be accessed using DOT notation (->getParam('arr.anotherArr.key'))
-	* @param string $name Parameter name
+	 *
+	 * @param string $name Parameter name
 	 * @param mixed $default Optional. A default value which will be returned if the parameter is not presented
 	 * @return mixed
 	 */
@@ -146,7 +134,8 @@ class Request
 
 	/**
 	 * Unset param from the request
-	* @param unknown $name
+	 *
+	 * @param unknown $name
 	 */
 	public function clearParam($name)
 	{
@@ -155,7 +144,8 @@ class Request
 
 	/**
 	 * Singleton implementation
-	* @return Request
+	 *
+	 * @return Request
 	 */
 	public static function getInstance()
 	{
@@ -168,7 +158,8 @@ class Request
 
 	/**
 	 * Check if the request is asynchronous
-	* @return boolean
+	 *
+	 * @return boolean
 	 */
 	public function isAjax()
 	{
@@ -177,7 +168,8 @@ class Request
 
 	/**
 	 * Determine if we are running in the console.
-	* @return bool
+	 *
+	 * @return bool
 	 */
 	public static function isInConsole()
 	{
