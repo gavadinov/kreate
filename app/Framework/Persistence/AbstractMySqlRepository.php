@@ -557,6 +557,27 @@ abstract class AbstractMySqlRepository
 		return;
 	}
 
+	public function selectColumn($sql, array $bindParams = array())
+	{
+		$sth = $this->adapter->exec($sql, $bindParams);
+
+		if($sth) {
+			return $sth->fetchAll(PDO::FETCH_COLUMN);
+		}
+		return;
+	}
+	
+	public function selectPair($sql, array $bindParams = array())
+	{
+		$sth = $this->adapter->exec($sql, $bindParams);
+
+		if($sth) {
+			return $sth->fetchAll(PDO::FETCH_KEY_PAIR);
+		}
+
+		return;
+	}
+
 	/**
 	 * Executes a statement and returns the first row
 	 * This method will fetch the row by using PDO::FETCH_ASSOC fetch style
