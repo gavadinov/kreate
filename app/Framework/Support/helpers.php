@@ -31,6 +31,30 @@ function pp()
 }
 
 /**
+ * Print the backtrace and kill the process 
+ */
+function backtrace()
+{
+	echo "<pre>";
+	var_dump(array_map(function($x) { return array($x['file'] => $x['line']); }, debug_backtrace()));
+	die;
+}
+
+/**
+ * Get key from array or get default value
+ *
+ *
+ * @param array $array
+ * @param mixed $value
+ * @param string $default
+ * @return Ambigous <string, unknown>
+ */
+function get(array $array, $key, $default = null)
+{
+	return isset($array[$key]) ? $array[$key] : $default;
+}
+
+/**
  * Return the passed object. Useful for chaining.
  *
 
