@@ -5,11 +5,11 @@ use \PDO;
 use Framework\Factory\AdapterFactory;
 use Framework\Persistence\Exception\DatabaseException;
 use Framework\Exception\Assert;
+use Framework\Config\AppConfig;
 
 /**
  *
  *
- 
  */
 abstract class AbstractMySqlRepository
 {
@@ -21,15 +21,18 @@ abstract class AbstractMySqlRepository
 	protected
 			$tableName = '',
 			$entityClassName = '',
+			$entityName = '',
+			$cacheEntities = true,
 			$primaryKeyName = '',
 			$dbHost = '',
 			$dbName = '';
 
 
 	/**
-	 * Acceptable options: dbHost, dbName, user, pass, tableName, primaryKeyName, entityClassName
+	 * Acceptable options: dbHost, dbName, user, pass, tableName, primaryKeyName, entityClassName, cacheEntities
 	 *
-	*/
+	 *
+	 */
 	abstract public function setOptions();
 
 	/**
@@ -37,7 +40,8 @@ abstract class AbstractMySqlRepository
 	 * Used in the finders themselves and check if the tableName an primaryKey props are setuped
 	 * IMPORTANT: This method do not check if tableName and primaryKey are acctually presented in the database.
 	 * It only checks if they have any value
-	* @param string $method the method which envoked the check
+	 *
+	 * @param string $method the method which envoked the check
 	 * @throws DatabaseException If the setup is not correct
 	 */
 	private function checkSetup($method)
@@ -51,7 +55,8 @@ abstract class AbstractMySqlRepository
 	/**
 	 * SET expression
 	 * Generates SET expression using specified array of columns
-	* @param array
+	 *
+	 * @param array
 	 * @return boolean string
 	 */
 	private function buildSetExpressionFromColumns($columns)
@@ -90,7 +95,8 @@ abstract class AbstractMySqlRepository
 	 * Simpe WHERE expression builder
 	 * Generates WHERE clause which is a conjuction of all parameters names that are passed in $conditions
 	 * It uses :placeholder-s in order the maintain auto-bind, but do not preform the actual binding.
-	* @param array $conditions
+	 *
+	 * @param array $conditions
 	 * @return boolean string
 	 * @example <code>
 	 *          $w = $this->buildWhereExpressionFromConditions(array(
@@ -113,8 +119,14 @@ abstract class AbstractMySqlRepository
 		foreach ($conditions as $column => $value) {
 			if (is_array($value)) {
 				if (isset($value['comparator']) && isset($value['value'])) {
-					$where .= $and . $column . ' ' . $value['comparator'] . ' :' . $column;
-					$conditions[$column] = $value['value'];
+					if (endsWith($value['value'], '()')) {
+						$bind = $value['value'];
+						unset($conditions[$column]);
+					} else {
+						$bind = ':' . $column;
+						$conditions[$column] = $value['value'];
+					}
+					$where .= $and . $column . ' ' . $value['comparator'] . ' ' . $bind;
 				} else {
 					$valuesAsString = '';
 					foreach ($value as $key => $singleValue) {
@@ -123,7 +135,7 @@ abstract class AbstractMySqlRepository
 					}
 					unset($conditions[$column]);
 					$valuesAsString = rtrim($valuesAsString, ',');
-					$where .= $and . $column . " IN({$valuesAsString})";
+					$where .= $and . $column . " IN ({$valuesAsString})";
 				}
 			} else {
 				$where .= $and . $column . ' = :' . $column;
@@ -134,9 +146,18 @@ abstract class AbstractMySqlRepository
 		return $where;
 	}
 
+	protected function buildInExpression(array $params)
+	{
+		$result = implode(',', $params);
+		$result = '(' . rtrim($result, ',') . ')';
+
+		return $result;
+	}
+
 	/**
 	 * Creates FORCE INDEX expression
-	* @param string $columnName
+	 *
+	 * @param string $columnName
 	 * @return string
 	 */
 	private function buildForceIndex($columnName)
@@ -152,7 +173,8 @@ abstract class AbstractMySqlRepository
 	 * Create a between expression.
 	 * This supports non consecutive numbers. For example the set 1,2,3,4,5,8 will be builded as:
 	 * ($columnName BETWEEN 1 AND 5 OR $columnName = 8)
-	* @param array $data An array with numbers (can be non consecutive)
+	 *
+	 * @param array $data An array with numbers (can be non consecutive)
 	 * @param string $columnName
 	 */
 	protected function buildBetweenExpression($data, $columnName) {
@@ -201,6 +223,53 @@ abstract class AbstractMySqlRepository
 		return $query;
 	}
 
+	/**
+	 * Build `column1, column2 VALUES value1, value2` expression
+	 *
+	 *
+	 * @param array $bindParams
+	 * @throws DatabaseException
+	 * @return multitype:string
+	 */
+	protected function buildInsert(array $bindParams)
+	{
+		if (count($bindParams) == 0) {
+			throw new DatabaseException('Bind params not provided.');
+		}
+
+		$comma = '';
+		$cols = '';
+		$placeholders = '';
+		foreach ($bindParams as $key => $value) {
+			$cols .= $comma . "`{$key}`";
+			$placeholders .= $comma . ":{$key}";
+			$comma = ', ';
+		}
+		$placeholders = '(' . $placeholders . ')';
+		$cols = '(' . $cols . ')';
+
+		return "{$cols} VALUES {$placeholders}";
+	}
+
+	/**
+	 * Execute Insert statement and return the inserted id
+	 *
+	 *
+	 * @param string $sql
+	 * @param array $bindParams
+	 * @return int|boolean
+	 */
+	protected function execCreate($sql, array $bindParams = array())
+	{
+		$this->adapter->exec($sql, $bindParams);
+
+		if ($this->adapter->queryOk) {
+			return $this->adapter->getPdo()->lastInsertId();
+		} else {
+			return false;
+		}
+	}
+
 	public function __construct()
 	{
 		$options = $this->setOptions();
@@ -209,9 +278,11 @@ abstract class AbstractMySqlRepository
 		$this->adapter = AdapterFactory::create($options);
 		$this->dbName = $this->adapter->getDbName();
 		$this->dbHost= $this->adapter->getDbHost();
-		$this->tableName = (isset($options['tableName']) ? $options['tableName'] : '');
-		$this->primaryKeyName = (isset($options['primaryKeyName']) ? $options['primaryKeyName'] : '');
-		$this->entityClassName = (isset($options['entityClassName']) ? 'Entity\\' . $options['entityClassName'] : '');
+		$this->tableName = get($options, 'tableName', '');
+		$this->primaryKeyName = get($options, 'primaryKeyName', '');
+		$this->cacheEntities = get($options, 'cacheEntities', AppConfig::get('CacheEntities', false));
+		$this->entityName = ucfirst(get($options, 'entityClassName', ''));
+		$this->entityClassName = (isset($options['entityClassName']) ? 'Entity\\' . ucfirst($options['entityClassName']) : '');
 	}
 
 	public function getTableName()
@@ -242,42 +313,44 @@ abstract class AbstractMySqlRepository
 	/**
 	 * Inserts new record in the db table
 	 * It uses the bind params to populate the columns of the record.
-	* @param array $bindParams
+	 *
+	 * @param array $bindParams
 	 * @return mixed Returns the id of the new record or false on failure
 	 */
 	public function create($bindParams)
 	{
 		$this->checkSetup(__METHOD__);
 
-		if (count($bindParams) == 0) {
-			throw new DatabaseException('Bind params not provided.');
-		}
+		$values = $this->buildInsert($bindParams);
 
-		$comma = '';
-		$cols = '';
-		$placeholders = '';
-		foreach ($bindParams as $key => $value) {
-			$cols .= $comma . "`{$key}`";
-			$placeholders .= $comma . ":{$key}";
-			$comma = ', ';
-		}
-		$placeholders = '(' . $placeholders . ')';
-		$cols = '(' . $cols . ')';
+		$sql = "INSERT INTO `{$this->tableName}` {$values}";
 
-		$sql = "INSERT INTO `{$this->tableName}` {$cols} VALUES {$placeholders}";
+		return $this->execCreate($sql, $bindParams);
+	}
 
-		$this->adapter->exec($sql, $bindParams);
-		if ($this->adapter->queryOk) {
-			return $this->adapter->getPdo()->lastInsertId();
-		} else {
-			return false;
-		}
+	/**
+	 * Same as create() but with INSERT IGNORE
+	 *
+	 *
+	 * @param array $bindParams
+	 * @throws DatabaseException
+	 */
+	public function createIgnore(array $bindParams)
+	{
+		$this->checkSetup(__METHOD__);
+
+		$values = $this->buildInsert($bindParams);
+
+		$sql = "INSERT IGNORE INTO `{$this->tableName}` {$values}";
+
+		return $this->execCreate($sql, $bindParams);
 	}
 
 	/**
 	 * Update record in the db table
 	 * It uses the bind params to populate the columns of the record.
-	* @param array $bindParams
+	 *
+	 * @param array $bindParams
 	 * @return boolean
 	 */
 	public function update($id, $bindParams)
@@ -299,7 +372,10 @@ abstract class AbstractMySqlRepository
 
 		$bindParams[$this->primaryKeyName . "_key"] = $id;
 
+		$this->exec($sql, $bindParams);
+
 		$this->adapter->exec($sql, $bindParams);
+
 		if ($this->adapter->queryOk) {
 			return true;
 		} else {
@@ -310,7 +386,8 @@ abstract class AbstractMySqlRepository
 	/**
 	 * Delete a record from the db table
 	 *
-	* @param int $id
+	 *
+	 * @param int $id
 	 */
 	public function delete($id)
 	{
@@ -328,7 +405,8 @@ abstract class AbstractMySqlRepository
 
 	/**
 	 * Update a record columns by primary key and changed values
-	* @param integer $primaryKey A value of the primary key used in WHERE clause
+	 *
+	 * @param integer $primaryKey A value of the primary key used in WHERE clause
 	 * @param array $bindParams array('set' => Name=>Value pair of the parameter to set/bind, 'where' => Name=>Value for the where statement
 	 * @return boolean
 	 */
@@ -365,7 +443,8 @@ abstract class AbstractMySqlRepository
 	/**
 	 * Find a record from the table by its ID
 	 *
-	* @param int $id
+	 *
+	 * @param int $id
 	 * @param boolean $assoc
 	 * @return array
 	 */
@@ -384,7 +463,8 @@ abstract class AbstractMySqlRepository
 	/**
 	 * Load an entity from the database
 	 *
-	* @param unknown $id
+	 *
+	 * @param unknown $id
 	 * @param bool $selectForUpdate
 	 * @throws DatabaseException
 	 * @return AbstractEntity
@@ -393,6 +473,12 @@ abstract class AbstractMySqlRepository
 	{
 		if (! class_exists($this->entityClassName)) {
 			throw new DatabaseException('Could not use loaders to repo which does not have entityClassName info.');
+		}
+
+		$entityPool = EntityPool::getInstance();
+
+		if ($this->cacheEntities && $entityPool->get($this->entityName, $id)) {
+			return $entityPool->get($this->entityName, $id);
 		}
 
 		$forUpdate = '';
@@ -411,13 +497,19 @@ abstract class AbstractMySqlRepository
 		));
 
 		$object = $stm->fetch();
+
+		if ($this->cacheEntities && $object) {
+			$entityPool->add($object);
+		}
+
 		return $object;
 	}
 
 	/**
 	 * Returns an array of rows that matches several conditions using AND
 	 * Uses auto-binding
-	* @param array $conditions Array of key, value pairs. Each key is the name of the column and the value is the
+	 *
+	 * @param array $conditions Array of key, value pairs. Each key is the name of the column and the value is the
 	 *        condition which this column supose to match
 	 * @param mixed $assoc Whether to hydrate as associative array (true), indexed array(false) or as
 	 *        object(PDO::FETCH_CLASS)
@@ -463,7 +555,8 @@ abstract class AbstractMySqlRepository
 
 	/**
 	 * Fetches all records from a specific table
-	* @param mixed $fetchStyle PDO::FETCH_CLASS or boolean
+	 *
+	 * @param mixed $fetchStyle PDO::FETCH_CLASS or boolean
 	 * @throws Exception
 	 * @return array
 	 */
@@ -487,7 +580,8 @@ abstract class AbstractMySqlRepository
 
 	/**
 	 * Returns a row that matches several conditions using AND
-	* @param array $conditions Array of key, value pairs. Each key is the name of the column and the value is the
+	 *
+	 * @param array $conditions Array of key, value pairs. Each key is the name of the column and the value is the
 	 *        condition which
 	 *        this column supose to match
 	 * @param bool $assoc Whether to hydrate as associative array (true), indexed array(false) or as
@@ -557,6 +651,14 @@ abstract class AbstractMySqlRepository
 		return;
 	}
 
+	/**
+	 *
+	 *
+	 *
+	 * @param string $sql
+	 * @param array $bindParams
+	 * @return array
+	 */
 	public function selectColumn($sql, array $bindParams = array())
 	{
 		$sth = $this->adapter->exec($sql, $bindParams);
@@ -566,7 +668,15 @@ abstract class AbstractMySqlRepository
 		}
 		return;
 	}
-	
+
+	/**
+	 *
+	 *
+	 *
+	 * @param string $sql
+	 * @param array $bindParams
+	 * @return array
+	 */
 	public function selectPair($sql, array $bindParams = array())
 	{
 		$sth = $this->adapter->exec($sql, $bindParams);
@@ -599,7 +709,8 @@ abstract class AbstractMySqlRepository
 	 * Executes a statement and returns the resultset
 	 * This method will fetch the resultset by using PDO::FETCH_CLASS fetch style
 	 *
-	* @param string $sql
+	 *
+	 * @param string $sql
 	 * @param array $bindParams
 	 * @return array<AbstractEntity>
 	 */
@@ -615,10 +726,90 @@ abstract class AbstractMySqlRepository
 	/**
 	 * Executes a statement
 	 *
-	* @param string $sql
+	 *
+	 * @param string $sql
 	 * @param array $bindParams
 	 */
 	public function exec($sql, array $bindParams = array()) {
-		$sth = $this->adapter->exec($sql, $bindParams);
+		$this->adapter->exec($sql, $bindParams);
+	}
+
+	/**
+	 * Proxy for MysqlAdapter::beginTransaction
+	 *
+	 *
+	 */
+	public function beginTransaction()
+	{
+		return $this->adapter->beginTransaction();
+	}
+
+	/**
+	 * Proxy for MysqlAdapter::commit
+	 *
+	 *
+	 */
+	public function commit()
+	{
+		return $this->adapter->commit();
+	}
+
+	/**
+	 * Proxy for MysqlAdapter::rollback
+	 *
+	 *
+	 */
+	public function rollback(DatabaseException $ex)
+	{
+		return $this->adapter->rollBack($ex);
+	}
+
+	/**
+	 * Get table's indexes
+	 *
+	 *
+	 * @return Ambigous <multitype:, void>
+	 */
+	public function getIndexes()
+	{
+		$sql = "SHOW KEYS FROM {$this->tableName}";
+
+		return $this->selectAssoc($sql);
+	}
+
+	/**
+	 * Get table's primary key
+	 *
+	 *
+	 * @return Ambigous <multitype:, void>
+	 */
+	public function getPrimaryKey()
+	{
+		$sql = "SHOW KEYS FROM {$this->tableName} WHERE Key_name = 'PRIMARY";
+
+		return $this->selectAssoc($sql);
+	}
+
+
+	/** Delete record by conditions
+	 *
+	 * @param array $params
+	 * @return affectedRows
+	 */
+	public function deleteByConditions(array $params)
+	{
+		$this->checkSetup(__METHOD__);
+
+		$whereExpr = $this->buildWhereExpressionFromConditions($params);
+
+		if ($whereExpr !== false) {
+			$sql = 'DELETE FROM ' . $this->tableName . ' WHERE ' . $whereExpr;
+
+			$this->exec($sql, $params);
+
+			return $this->adapter->affectedRows;
+		}
+
+		return false;
 	}
 }
