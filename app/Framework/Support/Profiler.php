@@ -4,6 +4,8 @@ namespace Framework\Support;
 
 use Framework\Support\Exception\ProfilerException;
 use Framework\Http\Request;
+use Framework\Factory\RepositoryFactory;
+use Framework\Event\EventDispatcher;
 
 class Profiler
 {
@@ -44,7 +46,7 @@ class Profiler
 
 	public static function addQuery($params)
 	{
-		if (Request::isInConsole()) {
+		if (Request::getInstance()->isInConsole) {
 			return;
 		}
 		$sql = $params['sql'];
@@ -100,6 +102,8 @@ class Profiler
 	public static function stop()
 	{
 		self::$data['stopTime'] = microtime(true);
+
+		EventDispatcher::fire('profiler.stop');
 	}
 
 	public static function startMiniTimer($timerName, $asFloat = true)
@@ -164,9 +168,11 @@ class Profiler
 		if (! isset(self::$data['stopTime'])) {
 			throw new ProfilerException('Request timer is not stoped!');
 		} else {
+			$loadingTime = self::$data['stopTime'] - self::$data['startTime'] - self::$sleepSeconds;
 			$request = array(
-				'fullTime' => self::prepareMs(self::$data['stopTime'] - self::$data['startTime'] - self::$sleepSeconds),
+				'fullTime' => self::prepareMs($loadingTime),
 				'memUsage' => readMemory(memory_get_peak_usage()),
+				'loadingTime' => $loadingTime,
 			);
 		}
 
@@ -179,5 +185,17 @@ class Profiler
 		);
 
 		return $result;
+	}
+
+	public static function getQueriesCount()
+	{
+		$count = 0;
+		foreach (self::$queries as $host) {
+			foreach ($host as $realm) {
+				$count += count($realm);
+			}
+		}
+
+		return $count;
 	}
 }
