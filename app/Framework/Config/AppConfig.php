@@ -32,7 +32,7 @@ class AppConfig
 
 	public static function resolveEnv()
 	{
-		if (Request::isInConsole()) {
+		if (Request::getInstance()->isInConsole) {
 			self::$env = self::ENV_DEV;
 		}
 		if (empty(self::$env)) {
