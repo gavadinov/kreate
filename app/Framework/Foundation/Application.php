@@ -17,6 +17,7 @@ use Framework\Foundation\Exception\AppException;
 use Framework\Config\AppConfig;
 use Controller\AjaxErrorController;
 use Framework\Persistence\UnitOfWork;
+use Framework\Event\EventDispatcher;
 
 class Application
 {
@@ -63,6 +64,14 @@ class Application
 				Request::getInstance()->setParam('noBeforeExecute', false);
 			}
 
+			$eventParams = array(
+				'controller' => $controller,
+				'controllerName' => $controller->getName(),
+				'method' => $method,
+				'params' => $params,
+			);
+			EventDispatcher::fire('framework.call', $eventParams);
+
 			$result = $controller->$method($params);
 			$result = $controller->after($result);
 		} catch (\Exception $e) {
@@ -97,7 +106,8 @@ class Application
 
 	/**
 	 * Forward the request to another controller
-	* @param ControllerForwardException $forwardException
+	 *
+	 * @param ControllerForwardException $forwardException
 	 * @throws \Exception
 	 */
 	private function handleForwardException(ControllerForwardException $forwardException)
@@ -126,7 +136,8 @@ class Application
 
 	/**
 	 * Prepares the Response object
-	* @param string $content
+	 *
+	 * @param string $content
 	 */
 	private function prepareResponse($content = null)
 	{
@@ -138,7 +149,8 @@ class Application
 
 	/**
 	 * Executes application before events
-	*/
+	 *
+	 */
 	private function fireBefore()
 	{
 		foreach ($this->before as $function) {
@@ -148,7 +160,8 @@ class Application
 
 	/**
 	 * Executes application after events
-	*/
+	 *
+	 */
 	private function fireAfter()
 	{
 		foreach ($this->after as $function) {
@@ -158,7 +171,8 @@ class Application
 
 	/**
 	 * Singleton
-	* @return Application
+	 *
+	 * @return Application
 	 */
 	public static function getInstance($request = null)
 	{
@@ -182,7 +196,8 @@ class Application
 	/**
 	 * Fire the application before execute and resolve route
 	 *
-	*/
+	 *
+	 */
 	public function setup()
 	{
 		$this->fireBefore();
@@ -192,7 +207,8 @@ class Application
 
 	/**
 	 * Make the thing run
-	*/
+	 *
+	 */
 	public function run($controllerName, $method, $params = null)
 	{
 		$this->controller = ControllerFactory::create($controllerName);
@@ -201,7 +217,8 @@ class Application
 
 	/**
 	 * Fire the application after execute and send the response back to the user
-	*/
+	 *
+	 */
 	public function shutdown()
 	{
 		$this->fireAfter();
@@ -220,7 +237,8 @@ class Application
 	/**
 	 * Passes the exception to the chain of handlers
 	 *
-	* @param \Exception $e
+	 *
+	 * @param \Exception $e
 	 * @throws \Exception
 	 */
 	public function handleException(\Exception $e)
@@ -247,7 +265,8 @@ class Application
 
 	/**
 	 * Register before execute handlers
-	* @param \Closure $before
+	 *
+	 * @param \Closure $before
 	 */
 	public function registerBefore(\Closure $before)
 	{
@@ -256,7 +275,8 @@ class Application
 
 	/**
 	 * Register after execute handlers
-	* @param \Closure $after
+	 *
+	 * @param \Closure $after
 	 */
 	public function registerAfter(\Closure $after)
 	{
@@ -265,7 +285,8 @@ class Application
 
 	/**
 	 * Returns general error string
-	* @param Exception $exception
+	 *
+	 * @param Exception $exception
 	 */
 	public function renderKernelPanicAlert(\Exception $e)
 	{
@@ -286,10 +307,11 @@ class Application
 	/**
 	 * Checks if the request path ends in a single trailing slash and
 	 * redirect it using a 301 response code if it does.
-	*/
+	 *
+	 */
 	public function redirectIfTrailingSlash()
 	{
-		if (Request::isInConsole()) return;
+		if (Request::getInstance()->isInConsole) return;
 
 		$uri = $this->request->uri;
 
