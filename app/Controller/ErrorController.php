@@ -49,7 +49,7 @@ class ErrorController extends AbstractController
 				}
 			}
 		}
-		if (Request::isInConsole()) {
+		if (Request::getInstance()->isInConsole) {
 			$message = strip_tags($message);
 			return $message;
 		}
