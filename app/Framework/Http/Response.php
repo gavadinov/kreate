@@ -26,7 +26,7 @@ class Response
 		if ($this->isJson) {
 			$this->setContentType('application/json');
 			$content = $this->content;
-			if (APP_ENV != AppConfig::ENV_LIVE) {
+			if (AppConfig::resolveEnv() != AppConfig::ENV_LIVE) {
 				$content['profiler'] = Profiler::getSummary();
 			}
 
@@ -37,7 +37,8 @@ class Response
 
 	/**
 	 * Singleton implementation
-	* @return Response
+	 *
+	 * @return Response
 	 */
 	public static function getInstance()
 	{
@@ -54,7 +55,8 @@ class Response
 	/**
 	 * Perform HTTP header redirect
 	 *
-	* @param string $url
+	 *
+	 * @param string $url
 	 * @param number $code
 	 */
 	public function redirect($url, $code = 301)
@@ -67,7 +69,8 @@ class Response
 
 	/**
 	 * Set the http status
-	* @param int $code
+	 *
+	 * @param int $code
 	 * @param string $message
 	 * @return Response
 	 */
@@ -82,7 +85,8 @@ class Response
 
 	/**
 	 * Set the isJson field
-	* @param bool $isJson
+	 *
+	 * @param bool $isJson
 	 * @return Response
 	 */
 	public function setIsJson($isJson)
@@ -93,7 +97,8 @@ class Response
 
 	/**
 	 * Set http header
-	* @param string $header
+	 *
+	 * @param string $header
 	 * @return Response
 	 */
 	public function setHeader($header)
@@ -104,7 +109,8 @@ class Response
 
 	/**
 	 * Set the content type
-	* @param string $type
+	 *
+	 * @param string $type
 	 * @return Response
 	 */
 	public function setContentType($type)
@@ -115,7 +121,8 @@ class Response
 
 	/**
 	 * Set the content
-	* @param string $content
+	 *
+	 * @param string $content
 	 * @return Response
 	 */
 	public function setContent($content)
@@ -126,7 +133,8 @@ class Response
 
 	/**
 	 *
-	* @return string
+	 *
+	 * @return string
 	 * @return Response
 	 */
 	public function getContent()
@@ -136,13 +144,14 @@ class Response
 
 	/**
 	 * Sends the response back to the client
-	*/
+	 *
+	 */
 	public function send()
 	{
 		Profiler::stop();
 		$content = $this->parseContent();
 
-		if (! Request::isInConsole()) {
+		if (! Request::getInstance()->isInConsole) {
 			header("HTTP/1.1 {$this->status['code']}: {$this->status['message']}", true, $this->status['code']);
 			foreach ($this->headers as $header) {
 				header($header);
