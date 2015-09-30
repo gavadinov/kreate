@@ -4,11 +4,10 @@ use Framework\Foundation\Application;
 use Framework\Http\Request;
 use Framework\Config\AppConfig;
 use Framework\Support\Profiler;
-use Framework\Support\Session;
 use Framework\Event\EventDispatcher;
 use Framework\Foundation\Exception\AppException;
 
-if (AppConfig::resolveEnv() == AppConfig::ENV_LIVE) {
+if (AppConfig::resolveEnv() == AppConfig::ENV_LIVE && ! AppConfig::get('showErrors', false)) {
 	error_reporting(0);
 	ini_set("display_errors", false);
 } else {
@@ -18,7 +17,6 @@ if (AppConfig::resolveEnv() == AppConfig::ENV_LIVE) {
 
 Profiler::start();
 
-Session::getInstance();
 $request = Request::getInstance();
 $app = Application::getInstance($request);
 EventDispatcher::registerAllSubscribers();
@@ -30,7 +28,7 @@ require_once app_dir . 'exceptionHandlers.php';
 require_once app_dir . 'functions.php';
 
 //Deal with catchable PHP errors
-if (APP_ENV != AppConfig::ENV_LIVE && ! Request::isInConsole()) {
+if (AppConfig::resolveEnv() != AppConfig::ENV_LIVE && ! Request::getInstance()->isInConsole) {
 	set_error_handler(function ($errno , $errstr, $errfile = null, $errline = null, $errcontext = array() ) {
 
 		$ex = new AppException("{$errstr} at {$errfile} {$errline}");
