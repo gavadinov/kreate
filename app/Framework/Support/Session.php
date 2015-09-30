@@ -4,7 +4,7 @@ namespace Framework\Support;
 
 use Framework\Config\AppConfig;
 use Framework\Http\Request;
-
+use Lib\Config;
 /**
  * Simple session abstraction
  *
@@ -27,7 +27,7 @@ class Session
 
 	private function __construct()
 	{
-		if (Request::isInConsole()) {
+		if (Request::getInstance()->isInConsole) {
 			return;
 		}
 		$this->setStorage();
@@ -43,7 +43,8 @@ class Session
 	}
 
 	/**
-	* @return string
+	 *
+	 * @return string
 	 */
 	private function prepareMemcacheServers()
 	{
@@ -58,11 +59,15 @@ class Session
 		return $return;
 	}
 
+	/**
+	 *
+	 */
 	private function setStorage()
 	{
 		$sessionLife = AppConfig::get('sessionLife', 84600);
 		ini_set('session.cookie_lifetime', $sessionLife);
 		ini_set('session.gc_maxlifetime', $sessionLife);
+		ini_set('session.cookie_httponly', true);
 
 		if (AppConfig::get('sessionStorage', 'file') == 'memcached') {
 			$ips = $this->prepareMemcacheServers();
@@ -125,7 +130,8 @@ class Session
 	/**
 	 * Check if a variable is present in the session
 	 *
-	* @param string $name
+	 *
+	 * @param string $name
 	 */
 	public function has($name)
 	{
@@ -148,6 +154,7 @@ class Session
 		} else {
 			$_SESSION = array();
 			session_destroy();
+			session_start();
 		}
 	}
 }
