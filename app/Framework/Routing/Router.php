@@ -12,7 +12,8 @@ class Router
 	/**
 	 * If app is running in the console resolve the controller and method
 	 *
-	* @return array
+	 *
+	 * @return array
 	 */
 	private function resolveCLI()
 	{
@@ -25,7 +26,8 @@ class Router
 	/**
 	 * Parse callback of type Controller@Method
 	 *
-	* @param unknown $callback
+	 *
+	 * @param unknown $callback
 	 * @return array
 	 */
 	public static function parseCallbackForController($callback)
@@ -38,13 +40,12 @@ class Router
 	/**
 	 * Find the current route in the pool of registered routes
 	 *
-	* @throws Exception\RouteNotFoundException
+	 *
+	 * @throws Exception\RouteNotFoundException
 	 * @return array
 	 */
-	private function matchRoute()
+	private function matchRoute($currRoute, $type)
 	{
-		$type = $this->request->type;
-		$currRoute = $this->request->uri;
 		$routes = $this->routes[$type];
 		if (isset($routes[$currRoute])) {
 			return array($routes[$currRoute], null);
@@ -70,7 +71,8 @@ class Router
 	/**
 	 * Prepare route params (:param)
 	 *
-	* @param array $params
+	 *
+	 * @param array $params
 	 * @param array $matches
 	 * @return array
 	 */
@@ -92,7 +94,8 @@ class Router
 	/**
 	 * Match route with reg ex
 	 *
-	* @param unknown $route
+	 *
+	 * @param unknown $route
 	 * @param unknown $pattern
 	 * @return array
 	 */
@@ -103,7 +106,8 @@ class Router
 	}
 
 	/**
-	* @param unknown $route
+	 *
+	 * @param unknown $route
 	 * @return array
 	 */
 	private function prepareRouteForRegExp(&$route)
@@ -127,14 +131,24 @@ class Router
 	/**
 	 * Does the magic
 	 *
-	* @return array
+	 *
+	 * @return array
 	 */
-	public function resolve()
+	public function resolve($currRoute = null, $type = null)
 	{
-		if (Request::isInConsole()) {
+		if (Request::getInstance()->isInConsole) {
 			return $this->resolveCLI();
 		}
-		list($route, $params) = $this->matchRoute();
+
+		if (is_null($currRoute)) {
+			$currRoute = $this->request->uri;
+		}
+
+		if (is_null($type)) {
+			$type = $this->request->type;
+		}
+
+		list($route, $params) = $this->matchRoute($currRoute, $type);
 
 		Request::getInstance()->setParam('currRoute', $route);
 		list($controllerName, $method) = self::parseCallbackForController($route->callback);
