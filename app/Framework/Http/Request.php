@@ -15,6 +15,7 @@ class Request
 			$type,
 			$isSecure,
 			$getParamsString,
+			$isInConsole = false,
 			$params = array();
 
 	/*
@@ -24,7 +25,9 @@ class Request
 
 	private function __construct()
 	{
-		if ($this->isInConsole()) {
+		$this->isInConsole = (php_sapi_name() == 'cli');
+
+		if ($this->isInConsole) {
 			return;
 		}
 
@@ -81,6 +84,17 @@ class Request
 	public function __get($name)
 	{
 		return (isset($this->$name) ? $this->$name : null);
+	}
+
+	/**
+	 * For testing purposes
+	 *
+	 *
+	 * @param bool $isInConsole
+	 */
+	public function setIsInConsole($isInConsole)
+	{
+		$this->isInConsole = $isInConsole;
 	}
 
 	/**
@@ -164,15 +178,5 @@ class Request
 	public function isAjax()
 	{
 		return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest');
-	}
-
-	/**
-	 * Determine if we are running in the console.
-	 *
-	 * @return bool
-	 */
-	public static function isInConsole()
-	{
-		return php_sapi_name() == 'cli';
 	}
 }
