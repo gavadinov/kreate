@@ -6,7 +6,6 @@ use Framework\Http\Request;
 /**
  * Dump and Die
  *
-
  * @param  dynamic  mixed
  * @return void
  */
@@ -20,7 +19,6 @@ function dd()
 /**
  * Pretty Print
  *
-
  * @param  dynamic  mixed
  * @return void
  */
@@ -30,9 +28,6 @@ function pp()
 	array_map(function($x) { print_r($x); }, func_get_args());
 }
 
-/**
- * Print the backtrace and kill the process 
- */
 function backtrace()
 {
 	echo "<pre>";
@@ -51,13 +46,15 @@ function backtrace()
  */
 function get(array $array, $key, $default = null)
 {
+	if (contains($key, '.')) {
+		return getArrayDotNotation($key, $array, $default);
+	}
 	return isset($array[$key]) ? $array[$key] : $default;
 }
 
 /**
  * Return the passed object. Useful for chaining.
  *
-
  * @param Object $object
  * @return Object
  */
@@ -69,7 +66,6 @@ function chain($object)
 /**
  * Checks if a string ends with a given substring
  *
-
  * @param string $haystack
  * @param string $needle
  * @return boolean
@@ -83,7 +79,6 @@ function endsWith($haystack, $needle)
 /**
  * Checks if a string starts with a given substring
  *
-
  * @param string $haystack
  * @param string $needle
  * @return boolean
@@ -97,7 +92,6 @@ function startsWith($haystack, $needle)
 /**
  * Checks if a string contains a given substring
  *
-
  * @param string $haystack
  * @param string $needle
  * @return boolean
@@ -175,7 +169,7 @@ function spacesToCamelCase($spaced, $first_char_caps = false)
 
 function getRealIpAddress()
 {
-	if (Request::isInConsole()) {
+	if (Request::getInstance()->isInConsole) {
 		return;
 	}
 	if (! empty($_SERVER['HTTP_CLIENT_IP']) && ($_SERVER['HTTP_CLIENT_IP'] != 'unknown')) {
@@ -193,7 +187,6 @@ function getRealIpAddress()
  * Get DB date
  *
  *
-
  * @return number
  */
 function getCurrentDate()
@@ -205,7 +198,6 @@ function getCurrentDate()
  * Get DB timestamp
  *
  *
-
  * @return number
  */
 function getCurrentTimestamp()
@@ -216,7 +208,6 @@ function getCurrentTimestamp()
 /**
  * Checks if array is associative
  *
-
  * @param array $array
  * @return boolean
  */
@@ -226,8 +217,23 @@ function isAssoc(array $array)
 }
 
 /**
- * Convern array keys to camelCase
+ * Flatten multidimentional array
+ *
+ * @param array $array
+ * @return array
+ */
+function arrayFlatten(array $array)
+{
+	$return = array();
+	$callback = function($a) use (&$return) {
+		$return[] = $a;
+	};
+	array_walk_recursive($array, $callback);
+	return $return;
+}
 
+/**
+ * Convern array keys to camelCase
  * @param array $array
  * @return array
  */
@@ -246,7 +252,6 @@ function arrayKeysToCamelCase(array $array)
 
 /**
  * Convern array keys to under_score
-
  * @param array $array
  * @return array
  */
@@ -267,7 +272,6 @@ function arrayKeysToUnderScore(array $array)
  * Return the given value casted to INTEGER
  * NOTE - php function intval returns 0 if null is passed
  * Used mostly to remain the possibility to unsetNullValues()
-
  * @param mixed $value
  * @return Ambigous <NULL, integer>
  */
@@ -280,7 +284,6 @@ function toInt($value)
  * Return the given value casted to FLOAT
  * NOTE - php function floatval returns 0 if null is passed
  * Used mostly to remain the possibility to unsetNullValues()
-
  * @param mixed $value
  * @return Ambigous <NULL, number>
  */
@@ -293,7 +296,6 @@ function toFloat($value)
  * Set values deep in the array using DOT notation
  *
  *
-
  * @param string $path
  * @param mixed $value
  * @param array $arr
@@ -326,7 +328,6 @@ function setArrayDotNotation($path, $value, array &$arr)
  * Get values from array using DOT notation
  *
  *
-
  * @param string $path
  * @param array $arr
  * @param mixed $default
@@ -351,7 +352,6 @@ function getArrayDotNotation($path, array $arr, $default = null)
  * If no memory is supplied current memory allocated by the PHP process will be used
  *
  *
-
  * @param int $size
  * @return string
  */
@@ -368,17 +368,18 @@ function readMemory($size = null)
  * Return classname without namespace
  *
  *
-
  * @param unknown $class
  */
 function parseClassname($class)
 {
+	if (is_object($class)) {
+		$class = get_class($class);
+	}
 	return join('', array_slice(explode('\\', $class), -1));
 }
 
 /**
  *
-
  * @param number $from
  * @param number $percent
  * @return number
@@ -397,7 +398,6 @@ function calcPercent($from, $percent, $round = true)
  * Cast numeric string to int or float
  *
  *
-
  * @param unknown $value
  */
 function castNumeric($value)
@@ -410,9 +410,28 @@ function castNumeric($value)
 }
 
 /**
+ * Check if number is odd
+ *
+ * @param unknown $number
+ */
+function isOdd($number)
+{
+	return ((int)$number % 2) != 0;
+}
+
+/**
+ * Check if a number is even
+ *
+ * @param unknown $number
+ */
+function isEven($number)
+{
+	return ((int)$number % 2) == 0;
+}
+
+/**
  *	clear input variable (anti hack)
  *
-
  * @param string $value
  * @return string
  */
@@ -423,24 +442,10 @@ function clearInput($data)
 	return $data;
 }
 
-function calcPriceByFormula1($startPrice, $level = 1, $startProcent = 2)
-{
-	$q = $startProcent;
-	$totalPrice = $startPrice;
-	for ($i=2; $i<=$level; $i++) {
-		$totalPrice = $totalPrice * max($q, 1.05);
-		$q *= 0.96;
-
-	}
-
-	return ceil($totalPrice);
-}
-
 /**
  * Format a number and prefix it with + or - if positive or negative
  *
  *
-
  * @param unknown $num
  * @return string
  */
@@ -452,5 +457,40 @@ function formatNumber($num, $round = true, $precision = 0) {
 	} else {
 		return sprintf("%+d", $num);
 	}
+}
 
+/**
+ * Get weighted rand between $min and $max and weight it by gamma
+ * 1 - unweighted, < 1 - higher numbers, > 1 - lower numbers
+ *
+ * @param unknown $min
+ * @param unknown $max
+ * @param number $gamma
+ * @return number
+ */
+function weightedRand($min, $max, $gamma = 1) {
+	$offset = $max - $min;
+	return floor($min + pow(lcg_value(), $gamma) * $offset);
+}
+
+
+/**
+ * Recursive directory search
+ *
+ *
+ * @param string $folder
+ * @param RegEx $pattern
+ * @return multitype:
+ */
+function rsearch($folder, $pattern = '/.*\.php/') {
+	$dir = new RecursiveDirectoryIterator($folder);
+	$ite = new RecursiveIteratorIterator($dir);
+	$files = new RegexIterator($ite, $pattern, RegexIterator::GET_MATCH);
+	$fileList = array();
+
+	foreach($files as $file) {
+		$fileList = array_merge($fileList, $file);
+	}
+
+	return $fileList;
 }
