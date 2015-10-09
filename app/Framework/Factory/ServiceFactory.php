@@ -6,7 +6,8 @@ class ServiceFactory
 	private static $instances = array();
 
 	/**
-	* @param string $name
+	 *
+	 * @param string $name
 	 * @return \Framework\Service\AbstractService
 	 */
 	public static function create($name, $flush = false)
@@ -17,7 +18,13 @@ class ServiceFactory
 			$name = ucwords($name);
 			$name = preg_replace('/ /', '\\', $name);
 		}
-		$fqn = 'Service\\' . ucfirst($name) . 'Service';
+
+		$name = ucfirst($name);
+		$serviceName = $name . 'Service';
+		$fqn = 'Service\\' . $serviceName;
+		if (! class_exists($fqn)) {
+			$fqn = 'Service\\' . $name .'\\' . $serviceName;
+		}
 
 		if (isset(self::$instances[$fqn]) && ! $flush) {
 			return self::$instances[$fqn];
@@ -25,7 +32,7 @@ class ServiceFactory
 
 		$service = new $fqn();
 
-		if ($service->getIsSingleton()) {
+		if ($service->isSingleton()) {
 			self::$instances[$fqn] = $service;
 		}
 
