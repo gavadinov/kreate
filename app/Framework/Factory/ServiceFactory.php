@@ -22,7 +22,7 @@ class ServiceFactory
 		$name = ucfirst($name);
 		$serviceName = $name . 'Service';
 		$fqn = 'Service\\' . $serviceName;
-		if (! class_exists($fqn)) {
+		if (! class_exists($fqn, true)) {
 			$fqn = 'Service\\' . $name .'\\' . $serviceName;
 		}
 
