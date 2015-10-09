@@ -374,8 +374,6 @@ abstract class AbstractMySqlRepository
 
 		$this->exec($sql, $bindParams);
 
-		$this->adapter->exec($sql, $bindParams);
-
 		if ($this->adapter->queryOk) {
 			return true;
 		} else {
