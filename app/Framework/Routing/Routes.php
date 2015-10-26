@@ -125,7 +125,7 @@ class Routes
 		foreach (self::$restDefaults as $method => $options) {
 			$callMethod = $options['method'];
 			$currRoute = $route . $options['route'];
-			$currName = $name . ucfirst($method);
+			$currName = $name . '.' . $method;
 			self::$callMethod($currRoute, $currName, $controller . '@' . $method);
 		}
 	}
