@@ -17,7 +17,7 @@ class Response
 			);
 
 	/*
-	 * Singleton instance of the request
+	 * Singleton instance
 	 */
 	private static $instance;
 
